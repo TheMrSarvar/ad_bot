@@ -1,0 +1,70 @@
+from sqlalchemy import select
+from PIL import Image, ImageDraw, ImageFont
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from database import async_session_maker
+from loader import bot
+from models.models import admins, adding
+
+
+async def following(user_id):
+    status = await bot.get_chat_member(-1002053603769, int(user_id))
+    if status.status == 'creator' or status.status == 'member':
+        return True
+    else:
+        return False
+
+
+async def is_admin(user_id):
+    async with async_session_maker() as session:
+        query = select(admins).where(admins.c.chat_id == user_id)
+        query = await session.execute(query)
+        query = query.fetchone()
+    if query:
+        return True
+    else:
+        return False
+
+
+async def is_super_admin(user_id):
+    async with async_session_maker() as session:
+        query = select(admins).where(admins.c.chat_id == int(user_id))
+        query = await session.execute(query)
+        query = query.fetchone()
+    if query:
+        if query[3]:
+            return True
+        else:
+            return False
+    else:
+        return False
+
+async def numeration(photos):
+    n = 1
+    for i in photos:
+        image = Image.open(i)
+        try:
+            font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 50)
+        except IOError:
+            font = ImageFont.load_default()
+        draw = ImageDraw.Draw(image)
+        draw.text((10, 10), f"{n})", font=font, fill=(255, 255, 255))
+        image.save(i)
+        n += 1
+
+
+
+async def create_inline_keyboard(images):
+    inline_keyboard = []
+    for i in range(0, len(images)):
+        if images[i] != "None":
+            inline_keyboard.append([InlineKeyboardButton(f"{i + 1}-rasm", callback_data=f"photo_{i + 1}")])
+    inline_keyboard.append([InlineKeyboardButton("🔙Back", callback_data="back_")])
+    return InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
+
+
+async def adding_language(num):
+    async with async_session_maker() as session:
+        query = select(adding).where(adding.c.id == num)
+        query = await session.execute(query)
+        query = query.fetchone()
+    return query[21]
